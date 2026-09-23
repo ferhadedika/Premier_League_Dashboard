@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Premier League Performance Dashboard 2020/21 to 2024/25</title>
+<meta name="description" content="Premier League team performance compared with underlying chances such as xG, possession and shots, from 2020/21 to 2024/25.">
+<link rel="stylesheet" href="styles.css">
+<script>
+  // Apply the saved theme before first paint. Light is the default; "system" follows the computer.
+  try{ var t = localStorage.getItem("pl-dashboard-theme"); if(t !== "system") document.documentElement.setAttribute("data-theme", t === "dark" ? "dark" : "light"); }
+  catch(e){ document.documentElement.setAttribute("data-theme", "light"); }
+</script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<div id="srLive" class="sr-only" aria-live="polite"></div>
+
+<header class="app-header">
+  <div class="header-row">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">PL</div>
+      <div class="brand-text">
+        <h1>Premier League Performance Overview</h1>
+        <p>Team performance compared with underlying chances, 2020/21 to 2024/25</p>
+      </div>
+    </div>
+    <div class="header-meta">
+      <span><span class="dot" aria-hidden="true"></span>Data to <b id="lastUpdated">—</b></span>
+      <span class="header-counts" id="headerCounts"></span>
+      <div class="header-actions">
+        <button class="header-btn" id="cmdkBtn" type="button" aria-haspopup="dialog" aria-keyshortcuts="Control+K Meta+K" aria-label="Open command menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <span class="btn-text">Jump to…</span><span class="kbd" id="cmdkKbd" aria-hidden="true">Ctrl K</span>
+        </button>
+        <button class="header-btn" id="themeBtn" type="button">
+          <span id="themeIcon" class="theme-icon"></span>
+          <span class="btn-text" id="themeLabel">Light</span>
+        </button>
+      </div>
+    </div>
+  </div>
+  <nav class="nav-tabs" role="tablist" aria-label="Dashboard views">
+    <button class="nav-tab" role="tab" id="tab-overview" aria-controls="view-overview" data-view="overview">Executive Overview</button>
+    <button class="nav-tab" role="tab" id="tab-explore" aria-controls="view-explore" data-view="explore">Exploratory Analysis</button>
+    <button class="nav-tab" role="tab" id="tab-detail" aria-controls="view-detail" data-view="detail">Detailed Investigation</button>
+    <button class="nav-tab" role="tab" id="tab-story" aria-controls="view-story" data-view="story">Story &amp; Insights</button>
+  </nav>
+</header>
+
+<div class="filter-bar" role="search" aria-label="Filters">
+  <div class="filter-selects">
+  <div class="filter-group">
+    <label class="filter-label" for="seasonSelect">Season</label>
+    <select id="seasonSelect" class="select-control"></select>
+  </div>
+  <div class="filter-group">
+    <label class="filter-label" for="venueSelect">Venue</label>
+    <select id="venueSelect" class="select-control">
+      <option value="All">All venues</option>
+      <option value="Home">Home</option>
+      <option value="Away">Away</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label class="filter-label" for="resultSelect">Result</label>
+    <select id="resultSelect" class="select-control">
+      <option value="All">All results</option>
+      <option value="W">Win</option>
+      <option value="D">Draw</option>
+      <option value="L">Loss</option>
+    </select>
+  </div>
+  </div>
+  <div class="filter-group search-wrap">
+    <label class="filter-label" for="searchInput">Team</label>
+    <div class="search-field">
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="searchInput" class="search-input" type="text" placeholder="Search a club…" autocomplete="off"
+        role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="searchSuggest">
+      <ul id="searchSuggest" class="search-suggest hidden" role="listbox" aria-label="Matching clubs"></ul>
+    </div>
+  </div>
+  <div class="chip-row" id="chipRow" aria-label="Active filters"></div>
+  <div class="filter-spacer"></div>
+  <div class="record-count" id="recordCount" aria-live="polite"></div>
+  <button class="btn" id="resetBtn" type="button">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
+    Reset all filters
+  </button>
+</div>
+
+<main id="main" tabindex="-1">
+
+<!-- ================= VIEW 1: EXECUTIVE OVERVIEW ================= -->
+<section class="view" id="view-overview" role="tabpanel" aria-labelledby="tab-overview" data-view="overview">
+  <div class="banner intro-banner">
+    <img class="banner-img" src="img/football.svg" alt="" width="40" height="40">
+    <div>
+      <h2>Domain &amp; problem statement</h2>
+      <p>This dashboard investigates Premier League team performance and match outcomes from 2020/21 to 2024/25. It looks at how underlying numbers such as expected goals, possession and shots on target relate to actual results, so analysts, coaching staff and fans can see past the scoreline.</p>
+    </div>
+  </div>
+  <div class="banner finding-banner hidden" id="findingBanner" role="status">
+    <img class="banner-img" src="img/finding.svg" alt="" width="32" height="32">
+    <div><h2>Key finding</h2><p class="finding-text"></p></div>
+  </div>
+
+  <h2 class="section-title">Key Performance Indicators<span class="rule"></span></h2>
+  <div class="grid grid-4" id="kpiRow"></div>
+
+  <h2 class="section-title">Trend &amp; Comparison<span class="rule"></span></h2>
+  <div class="grid grid-2">
+    <div class="chart-card">
+      <div class="chart-card-head">
+        <div><h3 class="chart-title">Cumulative Points Across the Season</h3><div class="chart-sub" id="ovTrendSub">Top clubs by points. Click a line or a name to select a club.</div></div>
+      </div>
+      <div class="chart-body" id="ovTrendChart"></div>
+      <div class="legend-row" id="ovTrendLegend"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-card-head">
+        <div><h3 class="chart-title">Wins, Draws and Losses by Club</h3><div class="chart-sub">Top 10 clubs by wins. Click a club to highlight it everywhere.</div></div>
+      </div>
+      <div class="chart-body" id="ovCompareChart"></div>
+      <div class="legend-row" aria-hidden="true">
+        <div class="legend-item"><span class="legend-swatch win"></span>Win</div>
+        <div class="legend-item"><span class="legend-swatch draw"></span>Draw</div>
+        <div class="legend-item"><span class="legend-swatch loss"></span>Loss</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= VIEW 2: EXPLORATORY ANALYSIS ================= -->
+<section class="view hidden" id="view-explore" role="tabpanel" aria-labelledby="tab-explore" data-view="explore">
+  <h2 class="section-title">Core Visualizations<span class="rule"></span></h2>
+  <div class="grid grid-2-even">
+    <div class="chart-card">
+      <div class="chart-card-head"><div><h3 class="chart-title">Shots on Target vs Goals Scored</h3><div class="chart-sub" id="exScatterSub">Relationship chart, colored by venue</div></div></div>
+      <div class="chart-body" id="exScatter"></div>
+      <div class="legend-row" id="exScatterLegend"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-card-head"><div><h3 class="chart-title">Possession by Match Result</h3><div class="chart-sub">Distribution chart showing a box plot of possession for wins, draws and losses</div></div></div>
+      <div class="chart-body" id="exBox"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-card-head"><div><h3 class="chart-title">Total Goals Scored by Team</h3><div class="chart-sub">Composition chart as a treemap. Click a tile to open that club.</div></div></div>
+      <div class="chart-body" id="exTreemap"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-card-head"><div><h3 class="chart-title">xG per Matchweek</h3><div class="chart-sub" id="exXgWeekSub">Trend chart for the selected club</div></div></div>
+      <div class="chart-body" id="exXgWeek"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-card-head"><div><h3 class="chart-title">Average Attendance per Season</h3><div class="chart-sub">Trend chart. The low 2020/21 figure reflects pandemic crowd limits.</div></div></div>
+      <div class="chart-body" id="exAttendance"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-card-head"><div><h3 class="chart-title">Possession vs Points Earned</h3><div class="chart-sub">Relationship chart. Each dot is one club in one match, colored by result.</div></div></div>
+      <div class="chart-body" id="exPossPoints"></div>
+    </div>
+  </div>
+
+  <h2 class="section-title">Wins, Draws and Losses for Every Club<span class="rule"></span></h2>
+  <div class="chart-card">
+    <div class="chart-body" id="exCompareFull"></div>
+  </div>
+
+  <h2 class="section-title">Advanced Visualization<span class="rule"></span></h2>
+  <div class="grid grid-2 align-start">
+    <div class="chart-card">
+      <div class="chart-card-head"><div><h3 class="chart-title">Calendar Heatmap of Points by Match Date</h3><div class="chart-sub">Shows when form improves or declines across the season</div></div></div>
+      <div class="chart-body scroll-x" id="exCalendar"></div>
+      <div class="heat-legend" id="exCalendarLegend"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-card-head"><div><h3 class="chart-title">Parallel Coordinates</h3><div class="chart-sub" id="exParallelSub">Points, xG differential, possession and shots on target for every club</div></div></div>
+      <div class="chart-body" id="exParallel"></div>
+    </div>
+  </div>
+  <div class="chart-card mt-4">
+    <div class="chart-card-head"><div><h3 class="chart-title">Scatter Plot Matrix</h3><div class="chart-sub" id="exMatrixNote">Goals, xG, possession, shots and shots on target, every pair compared at once</div></div></div>
+    <div class="chart-body" id="exMatrix"></div>
+  </div>
+</section>
+
+<!-- ================= VIEW 3: DETAILED INVESTIGATION ================= -->
+<section class="view hidden" id="view-detail" role="tabpanel" aria-labelledby="tab-detail" data-view="detail">
+  <nav class="breadcrumb" id="detailBreadcrumb" aria-label="Breadcrumb"></nav>
+
+  <div class="prompt-state" id="detailPrompt">
+    <h2>Select a team to drill in</h2>
+    <p>Pick a club below to see its season, its numbers against the league and every match. You can also click a club in any chart.</p>
+    <div class="team-grid" id="teamQuickGrid"></div>
+  </div>
+
+  <div id="detailContent">
+    <div class="summary-panel" id="summaryPanel"></div>
+
+    <h2 class="section-title">Contextual Comparison with the League Average<span class="rule"></span></h2>
+    <div class="chart-card">
+      <div class="compare-list" id="contextCompare"></div>
+      <div class="chart-sub mt-4" id="contextCompareNote"></div>
+    </div>
+
+    <h2 class="section-title">Every Match<span class="rule"></span><span class="meta" id="detailTableCount"></span></h2>
+    <div class="chart-card table-card">
+      <table class="data-table" id="detailTable">
+        <caption class="sr-only">Matches for the selected club. Select a row to highlight it.</caption>
+        <thead></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ================= VIEW 4: STORY & INSIGHTS ================= -->
+<section class="view hidden" id="view-story" role="tabpanel" aria-labelledby="tab-story" data-view="story">
+  <h2 class="section-title">Data Storytelling<span class="rule"></span></h2>
+  <!-- Filled by renderStory(): every figure is computed from the data, so the narrative can't drift from it -->
+  <div id="storyBlocks"></div>
+
+  <h2 class="section-title">Seven Insights From the Data<span class="rule"></span></h2>
+  <div class="chart-card">
+    <ol class="insight-list" id="insightList"></ol>
+  </div>
+
+  <h2 class="section-title">Actionable Recommendations<span class="rule"></span></h2>
+  <div id="recoList"></div>
+</section>
+
+</main>
+
+<!-- Command menu -->
+<div class="cmdk hidden" id="cmdk">
+  <div class="cmdk-panel" role="dialog" aria-modal="true" aria-label="Command menu">
+    <input class="cmdk-input" id="cmdkInput" type="text" placeholder="Jump to a club, view, season or filter…" autocomplete="off" spellcheck="false"
+      role="combobox" aria-expanded="true" aria-controls="cmdkList" aria-autocomplete="list">
+    <ul class="cmdk-list" id="cmdkList" role="listbox" aria-label="Commands"></ul>
+    <div class="cmdk-foot" aria-hidden="true"><span><kbd>↑</kbd><kbd>↓</kbd>navigate</span><span><kbd>↵</kbd>select</span><span><kbd>esc</kbd>close</span></div>
+  </div>
+</div>
+
+<script src="vendor/d3.v7.9.0.min.js"></script>
+<script src="data/matches.js"></script>
+<!-- App code: shared core first, then one file per view, then start-up -->
+<script src="js/core.js"></script>
+<script src="js/overview.js"></script>
+<script src="js/explore.js"></script>
+<script src="js/detail.js"></script>
+<script src="js/story.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
